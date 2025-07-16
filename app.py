@@ -1,24 +1,27 @@
 import streamlit as st
-import openai
 import tempfile
 import os
+import requests
+import json
 
 from PyPDF2 import PdfReader
 import docx2txt
 
-st.set_page_config(page_title="AI File Prompt Processor")
-st.title("📄 AI Document Processor with GPT")
-st.markdown("Upload a **.pdf** or **.docx** file, enter a prompt, and process it with GPT.")
+st.set_page_config(page_title="AI File Prompt Processor (Gemini)")
+st.title("📄 AI Document Processor with Gemini Pro")
+st.markdown("Upload a **.pdf** or **.docx** file, enter a prompt, and process it using Google Gemini API.")
 
 uploaded_file = st.file_uploader("Choose a file (PDF or DOCX)", type=["pdf", "docx"])
 user_prompt = st.text_area("Enter your prompt")
 
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    api_key = st.text_input("Enter your OpenAI API key", type="password")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if not gemini_api_key:
+    gemini_api_key = st.text_input("Enter your Gemini API key", type="password")
+
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
 if st.button("Process"):
-    if not uploaded_file or not user_prompt or not api_key:
+    if not uploaded_file or not user_prompt or not gemini_api_key:
         st.warning("Please provide a file, prompt, and API key.")
         st.stop()
 
@@ -39,17 +42,22 @@ if st.button("Process"):
         st.error("Unsupported file type.")
         st.stop()
 
-    client = openai.OpenAI(api_key=api_key)
     full_prompt = f"Document Content:\n{text}\n\nUser Request:\n{user_prompt}"
 
-    with st.spinner("Processing with GPT-3.5-Turbo..."):
+    with st.spinner("Processing with Gemini Pro..."):
         try:
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{"role": "user", "content": full_prompt}]
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{"parts": [{"text": full_prompt}]}]
+            }
+            response = requests.post(
+                f"{GEMINI_API_URL}?key={gemini_api_key}",
+                headers=headers,
+                data=json.dumps(payload)
             )
-            result = response.choices[0].message.content
+            result = response.json()
+            output = result["candidates"][0]["content"]["parts"][0]["text"]
             st.success("✅ Response:")
-            st.write(result)
+            st.write(output)
         except Exception as e:
             st.error(f"❌ Error: {e}")
