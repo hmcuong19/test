@@ -42,10 +42,10 @@ if st.button("Process"):
     client = openai.OpenAI(api_key=api_key)
     full_prompt = f"Document Content:\n{text}\n\nUser Request:\n{user_prompt}"
 
-    with st.spinner("Processing with GPT-4..."):
+    with st.spinner("Processing with GPT-3.5-Turbo..."):
         try:
             response = client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": full_prompt}]
             )
             result = response.choices[0].message.content
