@@ -56,8 +56,15 @@ if st.button("Process"):
                 data=json.dumps(payload)
             )
             result = response.json()
-            output = result["candidates"][0]["content"]["parts"][0]["text"]
-            st.success("✅ Response:")
-            st.write(output)
+
+            if "candidates" in result and result["candidates"]:
+                output = result["candidates"][0]["content"]["parts"][0]["text"]
+                st.success("✅ Response:")
+                st.write(output)
+            else:
+                st.error("❌ Gemini API did not return a valid response. Check your prompt or API key.")
+                st.subheader("Raw API response:")
+                st.json(result)
+
         except Exception as e:
             st.error(f"❌ Error: {e}")
