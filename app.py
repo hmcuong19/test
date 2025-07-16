@@ -1,42 +1,55 @@
 import streamlit as st
-import docx2txt
 import openai
 import tempfile
-from PyPDF2 import PdfReader
 import os
 
-# Nhập API key
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+from PyPDF2 import PdfReader
+import docx2txt
 
-st.title("📄 AI File Processor")
-st.write("Upload PDF hoặc DOCX và nhập yêu cầu xử lý")
+st.set_page_config(page_title="AI File Prompt Processor")
+st.title("📄 AI Document Processor with GPT")
+st.markdown("Upload a **.pdf** or **.docx** file, enter a prompt, and process it with GPT.")
 
-uploaded_file = st.file_uploader("Chọn file PDF hoặc DOCX", type=["pdf", "docx"])
-user_prompt = st.text_area("Nhập yêu cầu (ví dụ: tóm tắt, liệt kê ý chính...)")
+uploaded_file = st.file_uploader("Choose a file (PDF or DOCX)", type=["pdf", "docx"])
+user_prompt = st.text_area("Enter your prompt")
 
-if st.button("Xử lý") and uploaded_file and user_prompt:
-    ext = uploaded_file.name.split('.')[-1]
-    text = ""
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    api_key = st.text_input("Enter your OpenAI API key", type="password")
 
-    if ext == "pdf":
-        with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
-            for page in doc:
-                text += page.get_text()
-    elif ext == "docx":
-        with open("temp.docx", "wb") as f:
-            f.write(uploaded_file.read())
-        text = docx2txt.process("temp.docx")
-    else:
-        st.error("Chỉ hỗ trợ PDF và DOCX.")
+if st.button("Process"):
+    if not uploaded_file or not user_prompt or not api_key:
+        st.warning("Please provide a file, prompt, and API key.")
         st.stop()
 
-    full_prompt = f"Văn bản:\n{text}\n\nYêu cầu xử lý:\n{user_prompt}"
-    with st.spinner("Đang xử lý với GPT-4..."):
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": full_prompt}]
-        )
-        result = response["choices"][0]["message"]["content"]
+    ext = uploaded_file.name.split('.')[-1].lower()
+    text = ""
 
-    st.subheader("✅ Kết quả:")
-    st.write(result)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp_file:
+        tmp_file.write(uploaded_file.read())
+        tmp_file_path = tmp_file.name
+
+    if ext == "pdf":
+        reader = PdfReader(tmp_file_path)
+        for page in reader.pages:
+            text += page.extract_text() or ""
+    elif ext == "docx":
+        text = docx2txt.process(tmp_file_path)
+    else:
+        st.error("Unsupported file type.")
+        st.stop()
+
+    client = openai.OpenAI(api_key=api_key)
+    full_prompt = f"Document Content:\n{text}\n\nUser Request:\n{user_prompt}"
+
+    with st.spinner("Processing with GPT-4..."):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": full_prompt}]
+            )
+            result = response.choices[0].message.content
+            st.success("✅ Response:")
+            st.write(result)
+        except Exception as e:
+            st.error(f"❌ Error: {e}")
