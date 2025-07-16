@@ -18,7 +18,7 @@ gemini_api_key = os.getenv("GEMINI_API_KEY")
 if not gemini_api_key:
     gemini_api_key = st.text_input("Enter your Gemini API key", type="password")
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
 
 if st.button("Process"):
     if not uploaded_file or not user_prompt or not gemini_api_key:
