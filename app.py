@@ -1,7 +1,8 @@
 import streamlit as st
-import fitz  # PyMuPDF
 import docx2txt
 import openai
+import tempfile
+from PyPDF2 import PdfReader
 import os
 
 # Nhập API key
